@@ -22,6 +22,15 @@
     </main>
 
     <script>
+      const commonUnits = ["g", "kg", "ml", "l", "each", "tin", "can", "box", "bag", "punnet"];
+
+      function unitSelect(name) {
+        const options = commonUnits
+          .map((unit) => `<option value="${unit}">${unit}</option>`)
+          .join("");
+        return `<select name="${name}">${options}</select>`;
+      }
+
       function addIngredientRow(containerId, prefix) {
         const container = document.getElementById(containerId);
         const row = document.createElement("div");
@@ -30,6 +39,19 @@
           <input name="${prefix}_name" placeholder="Ingredient">
           <input name="${prefix}_amount" type="number" min="0" step="0.01" placeholder="Amount">
           <input name="${prefix}_unit" placeholder="Unit">
+          <button class="icon-button" type="button" onclick="this.parentElement.remove()" title="Remove">x</button>
+        `;
+        container.appendChild(row);
+      }
+
+      function addExtraRow(containerId) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement("div");
+        row.className = "ingredient-row";
+        row.innerHTML = `
+          <input name="extra_name" placeholder="Extra item">
+          <input name="extra_amount" type="number" min="0" step="0.01" placeholder="Amount">
+          ${unitSelect("extra_unit")}
           <button class="icon-button" type="button" onclick="this.parentElement.remove()" title="Remove">x</button>
         `;
         container.appendChild(row);
