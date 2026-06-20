@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ mode }} recipe</p>
+    <h1>{{ recipe_name or "New recipe" }}</h1>
+  </div>
+</div>
+
+<form class="panel stack" method="post">
+  {% if mode == "Add" %}
+    <label>
+      Recipe name
+      <input name="recipe_name" placeholder="tomato pasta" required>
+    </label>
+  {% endif %}
+
+  <div id="ingredients" class="stack">
+    {% for ingredient in ingredients %}
+      <div class="ingredient-row">
+        <input name="ingredient_name" value="{{ ingredient.name }}" placeholder="Ingredient">
+        <input name="ingredient_amount" value="{{ ingredient.amount }}" type="number" min="0" step="0.01" placeholder="Amount">
+        <input name="ingredient_unit" value="{{ ingredient.unit }}" placeholder="Unit">
+        <button class="icon-button" type="button" onclick="this.parentElement.remove()" title="Remove">x</button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="button-row">
+    <button type="button" class="secondary" onclick="addIngredientRow('ingredients', 'ingredient')">Add ingredient</button>
+    <button type="submit">Save recipe</button>
+  </div>
+</form>
+{% endblock %}

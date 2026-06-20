@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Optional tracking</p>
+    <h1>Budget</h1>
+  </div>
+</div>
+
+<section class="panel">
+  {% if latest is not none %}
+    <div class="budget-grid">
+      <div><span>Weekly</span><strong>{{ format_money(latest) }}</strong></div>
+      <div><span>Monthly average</span><strong>{{ format_money(latest * 52 / 12) }}</strong></div>
+      <div><span>Yearly</span><strong>{{ format_money(latest * 52) }}</strong></div>
+    </div>
+  {% else %}
+    <p class="empty">No saved shopping totals yet.</p>
+  {% endif %}
+</section>
+
+<section class="list-panel">
+  {% for row in rows %}
+    <div class="list-row">
+      <span>{{ row.shopping_date }}</span>
+      <strong>{{ format_money(row.total) }}</strong>
+    </div>
+  {% endfor %}
+</section>
+{% endblock %}

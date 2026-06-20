@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Pastel pantry planning</p>
+    <h1>Your food week, gently organised.</h1>
+    <p>Plan lunches and dinners, keep track of what is already in the cupboard, and make a copyable shopping list.</p>
+  </div>
+  <div class="quick-stats">
+    <div>
+      <strong>{{ recipe_count }}</strong>
+      <span>recipes</span>
+    </div>
+    <div>
+      <strong>{{ cupboard_count }}</strong>
+      <span>cupboard items</span>
+    </div>
+  </div>
+</section>
+
+<section class="action-grid">
+  <a class="action-card pink" href="{{ url_for('planner') }}">
+    <span>Plan meals</span>
+    <strong>Create a shopping list</strong>
+  </a>
+  <a class="action-card blue" href="{{ url_for('recipes') }}">
+    <span>Recipe book</span>
+    <strong>Add or edit recipes</strong>
+  </a>
+  <a class="action-card lilac" href="{{ url_for('cupboard') }}">
+    <span>Cupboard</span>
+    <strong>Update your stock</strong>
+  </a>
+</section>
+{% endblock %}

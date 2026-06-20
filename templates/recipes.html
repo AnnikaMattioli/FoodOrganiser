@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Saved meals</p>
+    <h1>Recipes</h1>
+  </div>
+  <a class="button" href="{{ url_for('new_recipe') }}">Add recipe</a>
+</div>
+
+<section class="recipe-grid">
+  {% if recipes %}
+    {% for recipe_name, recipe in recipes.items() %}
+      <a class="recipe-card" href="{{ url_for('recipe_detail', recipe_name=recipe_name) }}">
+        <strong>{{ recipe_name }}</strong>
+        <span>{{ recipe.ingredients|length }} ingredients</span>
+      </a>
+    {% endfor %}
+  {% else %}
+    <p class="empty">No recipes yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

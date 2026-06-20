@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Food Organiser</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('dashboard') }}">Food Organiser</a>
+      <nav>
+        <a href="{{ url_for('cupboard') }}">Cupboard</a>
+        <a href="{{ url_for('recipes') }}">Recipes</a>
+        <a href="{{ url_for('planner') }}">Planner</a>
+        <a href="{{ url_for('budget') }}">Budget</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+
+    <script>
+      function addIngredientRow(containerId, prefix) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement("div");
+        row.className = "ingredient-row";
+        row.innerHTML = `
+          <input name="${prefix}_name" placeholder="Ingredient">
+          <input name="${prefix}_amount" type="number" min="0" step="0.01" placeholder="Amount">
+          <input name="${prefix}_unit" placeholder="Unit">
+          <button class="icon-button" type="button" onclick="this.parentElement.remove()" title="Remove">x</button>
+        `;
+        container.appendChild(row);
+      }
+
+      function copyShoppingList() {
+        const text = document.getElementById("copyable-list").innerText;
+        navigator.clipboard.writeText(text);
+      }
+    </script>
+  </body>
+</html>

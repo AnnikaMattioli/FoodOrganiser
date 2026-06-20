@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Seven day plan</p>
+    <h1>Meal planner</h1>
+  </div>
+</div>
+
+<form method="post" class="stack">
+  <section class="planner-grid">
+    {% for day in days %}
+      <div class="day-panel">
+        <h2>{{ day }}</h2>
+        {% for meal in meals %}
+          <label>
+            {{ meal|capitalize }}
+            <select name="{{ day }}_{{ meal }}">
+              <option value="">n/a or going out</option>
+              {% for recipe_name in recipes %}
+                <option value="{{ recipe_name }}">{{ recipe_name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="panel stack">
+    <div>
+      <p class="eyebrow">Extras</p>
+      <h2>Anything else for the shop?</h2>
+    </div>
+    <div id="extras" class="stack"></div>
+    <button type="button" class="secondary" onclick="addIngredientRow('extras', 'extra')">Add extra item</button>
+  </section>
+
+  <button class="big-button" type="submit">Create shopping list</button>
+</form>
+{% endblock %}
