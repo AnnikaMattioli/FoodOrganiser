@@ -96,6 +96,63 @@ DEFAULT_PRICES = {
     ("blueberries", "g"): (150, 2.00),
     ("protein bar", "each"): (1, 1.25),
     ("soda", "ml"): (2000, 1.50),
+    ("tomatoes", "tin"): (1, 0.47),
+    ("beans", "tin"): (1, 0.40),
+    ("bread", "each"): (1, 1.10),
+    ("chicken", "g"): (600, 4.75),
+    ("broccoli", "g"): (335, 0.85),
+    ("soy sauce", "ml"): (150, 1.20),
+    ("potato", "each"): (1, 0.35),
+}
+
+CUPBOARD_CATEGORIES = [
+    "Fruit and veg",
+    "Fridge",
+    "Freezer",
+    "Store cupboard",
+    "Bakery",
+    "Snacks and drinks",
+    "Other",
+]
+
+CATEGORY_KEYWORDS = {
+    "Fruit and veg": [
+        "apple",
+        "banana",
+        "berries",
+        "blueberries",
+        "broccoli",
+        "carrot",
+        "onion",
+        "potato",
+        "strawberries",
+        "tomato",
+        "tomatoes",
+    ],
+    "Fridge": ["butter", "cheese", "chicken", "milk", "yoghurt", "yogurt"],
+    "Freezer": ["frozen"],
+    "Store cupboard": [
+        "beans",
+        "cereal",
+        "flour",
+        "oil",
+        "pasta",
+        "rice",
+        "soy sauce",
+        "sugar",
+        "tin",
+        "tomatoes",
+    ],
+    "Bakery": ["bagel", "bread", "wrap"],
+    "Snacks and drinks": ["protein bar", "soda", "crisps", "chocolate", "popcorn"],
+}
+
+SAMPLE_RECIPE_INSTRUCTIONS = {
+    "tomato pasta": "Boil the pasta. Warm the tomatoes with a little oil, then stir through the pasta and finish with cheese.",
+    "chicken rice bowl": "Cook the rice. Fry the chicken until cooked through, add broccoli and soy sauce, then serve everything in a bowl.",
+    "cheese toastie": "Butter the bread, add cheese, then toast in a pan or toastie maker until golden and melted.",
+    "strawberry cereal bowl": "Pour cereal into a bowl, add milk, then top with chopped strawberries.",
+    "jacket potato beans": "Bake or microwave the potato until soft. Heat the beans, split the potato, then add butter, beans, and cheese.",
 }
 
 
@@ -112,7 +169,8 @@ def setup_database(connection):
         CREATE TABLE IF NOT EXISTS cupboard_items (
             name TEXT PRIMARY KEY,
             amount REAL NOT NULL,
-            unit TEXT NOT NULL
+            unit TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'Other'
         )
         """
     )
@@ -120,7 +178,8 @@ def setup_database(connection):
         """
         CREATE TABLE IF NOT EXISTS recipes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
+            name TEXT NOT NULL UNIQUE,
+            instructions TEXT NOT NULL DEFAULT ''
         )
         """
     )
@@ -157,8 +216,23 @@ def setup_database(connection):
         """
     )
     connection.commit()
+    ensure_column(connection, "cupboard_items", "category", "TEXT NOT NULL DEFAULT 'Other'")
+    ensure_column(connection, "recipes", "instructions", "TEXT NOT NULL DEFAULT ''")
+    update_existing_cupboard_categories(connection)
     seed_default_prices(connection)
+    seed_sample_recipe_instructions(connection)
     migrate_old_json_data(connection)
+    seed_sample_recipe_instructions(connection)
+
+
+def ensure_column(connection, table_name, column_name, column_definition):
+    columns = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    if any(column["name"] == column_name for column in columns):
+        return
+    connection.execute(
+        f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+    )
+    connection.commit()
 
 
 def seed_default_prices(connection):
@@ -170,6 +244,34 @@ def seed_default_prices(connection):
             VALUES (?, ?, ?, ?)
             """,
             (name, unit, package_amount, package_price),
+        )
+    connection.commit()
+
+
+def update_existing_cupboard_categories(connection):
+    rows = connection.execute(
+        "SELECT name, category FROM cupboard_items"
+    ).fetchall()
+    for row in rows:
+        if row["category"] and row["category"] != "Other":
+            continue
+        guessed_category = guess_category(row["name"])
+        connection.execute(
+            "UPDATE cupboard_items SET category = ? WHERE name = ?",
+            (guessed_category, row["name"]),
+        )
+    connection.commit()
+
+
+def seed_sample_recipe_instructions(connection):
+    for recipe_name, instructions in SAMPLE_RECIPE_INSTRUCTIONS.items():
+        connection.execute(
+            """
+            UPDATE recipes
+            SET instructions = ?
+            WHERE name = ? AND (instructions IS NULL OR instructions = '')
+            """,
+            (instructions, recipe_name),
         )
     connection.commit()
 
@@ -197,6 +299,20 @@ def normalise_name(name):
 def normalise_unit(unit):
     cleaned = unit.strip().lower()
     return UNIT_ALIASES.get(cleaned, cleaned)
+
+
+def normalise_category(category):
+    cleaned = category.strip()
+    if cleaned in CUPBOARD_CATEGORIES:
+        return cleaned
+    return "Other"
+
+
+def guess_category(name):
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        if any(keyword in name for keyword in keywords):
+            return category
+    return "Other"
 
 
 def to_base_amount(amount, unit):
@@ -282,15 +398,28 @@ def enter_ingredient():
 
 def get_cupboard(connection):
     rows = connection.execute(
-        "SELECT name, amount, unit FROM cupboard_items ORDER BY name"
+        "SELECT name, amount, unit, category FROM cupboard_items ORDER BY category, name"
     ).fetchall()
     return {
-        row["name"]: {"amount": row["amount"], "unit": row["unit"]}
+        row["name"]: {
+            "amount": row["amount"],
+            "unit": row["unit"],
+            "category": row["category"] or guess_category(row["name"]),
+        }
         for row in rows
     }
 
 
-def upsert_cupboard_item(connection, name, amount, unit):
+def group_cupboard_by_category(cupboard):
+    grouped = {category: {} for category in CUPBOARD_CATEGORIES}
+    for name, item in cupboard.items():
+        category = item.get("category") or guess_category(name)
+        grouped.setdefault(category, {})[name] = item
+    return {category: items for category, items in grouped.items() if items}
+
+
+def upsert_cupboard_item(connection, name, amount, unit, category=None):
+    category = normalise_category(category or guess_category(name))
     existing = connection.execute(
         "SELECT amount, unit FROM cupboard_items WHERE name = ?",
         (name,),
@@ -305,13 +434,20 @@ def upsert_cupboard_item(connection, name, amount, unit):
 
     if existing:
         connection.execute(
-            "UPDATE cupboard_items SET amount = amount + ? WHERE name = ?",
-            (amount, name),
+            """
+            UPDATE cupboard_items
+            SET amount = amount + ?, category = ?
+            WHERE name = ?
+            """,
+            (amount, category, name),
         )
     else:
         connection.execute(
-            "INSERT INTO cupboard_items (name, amount, unit) VALUES (?, ?, ?)",
-            (name, amount, unit),
+            """
+            INSERT INTO cupboard_items (name, amount, unit, category)
+            VALUES (?, ?, ?, ?)
+            """,
+            (name, amount, unit, category),
         )
 
     connection.commit()
@@ -372,7 +508,9 @@ def recipe_exists(connection, recipe_name):
 
 
 def get_recipes(connection):
-    rows = connection.execute("SELECT id, name FROM recipes ORDER BY name").fetchall()
+    rows = connection.execute(
+        "SELECT id, name, instructions FROM recipes ORDER BY name"
+    ).fetchall()
     recipes = {}
 
     for row in rows:
@@ -386,6 +524,7 @@ def get_recipes(connection):
             (row["id"],),
         ).fetchall()
         recipes[row["name"]] = {
+            "instructions": row["instructions"] or "",
             "ingredients": [
                 {
                     "name": ingredient["name"],
@@ -399,10 +538,10 @@ def get_recipes(connection):
     return recipes
 
 
-def save_recipe(connection, recipe_name, ingredients):
+def save_recipe(connection, recipe_name, ingredients, instructions=""):
     cursor = connection.execute(
-        "INSERT INTO recipes (name) VALUES (?)",
-        (recipe_name,),
+        "INSERT INTO recipes (name, instructions) VALUES (?, ?)",
+        (recipe_name, instructions.strip()),
     )
     recipe_id = cursor.lastrowid
 
@@ -420,6 +559,14 @@ def save_recipe(connection, recipe_name, ingredients):
             ),
         )
 
+    connection.commit()
+
+
+def update_recipe_instructions(connection, recipe_name, instructions):
+    connection.execute(
+        "UPDATE recipes SET instructions = ? WHERE name = ?",
+        (instructions.strip(), recipe_name),
+    )
     connection.commit()
 
 

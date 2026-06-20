@@ -16,6 +16,11 @@
     </label>
   {% endif %}
 
+  <label>
+    Instructions
+    <textarea name="instructions" rows="5" placeholder="Write the steps for making this recipe.">{{ instructions }}</textarea>
+  </label>
+
   <div id="ingredients" class="stack">
     {% for ingredient in ingredients %}
       <div class="ingredient-row">

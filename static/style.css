@@ -263,7 +263,7 @@ button,
 
 .cupboard-form-grid {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.8fr;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr 1fr;
   gap: 10px;
 }
 
@@ -319,11 +319,26 @@ textarea {
 
 .inventory-section {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .section-title h2 {
   margin: 0;
+}
+
+.category-block {
+  display: grid;
+  gap: 10px;
+}
+
+.category-block h3 {
+  width: fit-content;
+  margin: 0;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #7e4c64;
+  font-size: 0.92rem;
 }
 
 .inventory-grid {
@@ -340,6 +355,26 @@ textarea {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.86);
   box-shadow: var(--shadow);
+}
+
+.recipe-card p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.recipe-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.method-text {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
 .inventory-card:nth-child(3n + 1) {
@@ -464,6 +499,7 @@ textarea {
   .cupboard-actions,
   .cupboard-form-grid,
   .inventory-grid,
+  .recipe-detail-grid,
   .inline-form,
   .ingredient-row {
     grid-template-columns: 1fr;

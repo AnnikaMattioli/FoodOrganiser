@@ -31,6 +31,14 @@
         Unit
         <input name="unit" placeholder="g, ml, each, tin..." required>
       </label>
+      <label>
+        Category
+        <select name="category">
+          {% for category in categories %}
+            <option value="{{ category }}">{{ category }}</option>
+          {% endfor %}
+        </select>
+      </label>
     </div>
     <button name="action" value="add">Add to cupboard</button>
   </form>
@@ -61,18 +69,23 @@
 <section class="inventory-section">
   <div class="section-title">
     <p class="eyebrow">Inventory</p>
-    <h2>Stored food</h2>
+    <h2>Stored food by category</h2>
   </div>
-  {% if items %}
-    <div class="inventory-grid">
-    {% for name, item in items.items() %}
-      <div class="inventory-card">
-        <span class="item-name">{{ name }}</span>
-        <strong>{{ format_amount(item.amount, item.unit) }}</strong>
-        <span class="unit-pill">{{ item.unit }}</span>
+  {% if grouped_items %}
+    {% for category, category_items in grouped_items.items() %}
+      <div class="category-block">
+        <h3>{{ category }}</h3>
+        <div class="inventory-grid">
+          {% for name, item in category_items.items() %}
+            <div class="inventory-card">
+              <span class="item-name">{{ name }}</span>
+              <strong>{{ format_amount(item.amount, item.unit) }}</strong>
+              <span class="unit-pill">{{ item.unit }}</span>
+            </div>
+          {% endfor %}
+        </div>
       </div>
     {% endfor %}
-    </div>
   {% else %}
     <div class="empty-state">
       <strong>No cupboard items yet.</strong>

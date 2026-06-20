@@ -5,8 +5,10 @@ A beginner-friendly terminal app for planning uni meals, tracking cupboard ingre
 ## What it does
 
 - Tracks exact cupboard amounts, like `flour: 500 g` or `cereal: 1 box`.
+- Organises cupboard items by category, like fruit and veg, fridge, bakery, and store cupboard.
 - Lets you save recipes manually.
 - Lets you view, edit, and delete saved recipes.
+- Stores recipe instructions so the recipe book can show how to make each meal.
 - Plans 7 days of lunch and dinner.
 - Lets you type `n/a` for meals where you are going out or skipping food at home.
 - Shows what percentage of a recipe's ingredients you already have.

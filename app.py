@@ -53,23 +53,32 @@ def cupboard():
         name = food.normalise_name(request.form["name"])
         amount = float(request.form["amount"])
         unit = food.normalise_unit(request.form["unit"])
+        category = food.normalise_category(request.form.get("category", "Other"))
         amount, unit = food.to_base_amount(amount, unit)
         action = request.form.get("action")
 
         if action == "use":
             food.reduce_cupboard_item(connection, name, amount, unit)
         else:
-            food.upsert_cupboard_item(connection, name, amount, unit)
+            food.upsert_cupboard_item(connection, name, amount, unit, category)
 
         connection.close()
         return redirect(url_for("cupboard"))
 
     items = food.get_cupboard(connection)
+    grouped_items = food.group_cupboard_by_category(items)
     connection.close()
-    return render_template("cupboard.html", items=items, format_amount=food.format_amount)
+    return render_template(
+        "cupboard.html",
+        items=items,
+        grouped_items=grouped_items,
+        categories=food.CUPBOARD_CATEGORIES,
+        format_amount=food.format_amount,
+    )
 
 
 @app.route("/recipes")
+@app.route("/recipe-book")
 def recipes():
     connection = get_connection()
     all_recipes = food.get_recipes(connection)
@@ -81,15 +90,22 @@ def recipes():
 def new_recipe():
     if request.method == "POST":
         recipe_name = food.normalise_name(request.form["recipe_name"])
+        instructions = request.form.get("instructions", "")
         ingredients = parse_ingredients()
         if recipe_name and ingredients:
             connection = get_connection()
             if not food.recipe_exists(connection, recipe_name):
-                food.save_recipe(connection, recipe_name, ingredients)
+                food.save_recipe(connection, recipe_name, ingredients, instructions)
             connection.close()
         return redirect(url_for("recipes"))
 
-    return render_template("recipe_form.html", recipe_name="", ingredients=[], mode="Add")
+    return render_template(
+        "recipe_form.html",
+        recipe_name="",
+        ingredients=[],
+        instructions="",
+        mode="Add",
+    )
 
 
 @app.route("/recipes/<path:recipe_name>")
@@ -123,6 +139,11 @@ def edit_recipe(recipe_name):
         ingredients = parse_ingredients()
         if ingredients:
             food.replace_recipe_ingredients(connection, recipe_name, ingredients)
+            food.update_recipe_instructions(
+                connection,
+                recipe_name,
+                request.form.get("instructions", ""),
+            )
         connection.close()
         return redirect(url_for("recipe_detail", recipe_name=recipe_name))
 
@@ -131,6 +152,7 @@ def edit_recipe(recipe_name):
         "recipe_form.html",
         recipe_name=recipe_name,
         ingredients=recipe["ingredients"],
+        instructions=recipe["instructions"],
         mode="Edit",
     )
 

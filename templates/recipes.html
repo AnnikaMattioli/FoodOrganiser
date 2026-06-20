@@ -4,7 +4,7 @@
 <div class="page-heading">
   <div>
     <p class="eyebrow">Saved meals</p>
-    <h1>Recipes</h1>
+    <h1>Recipe Book</h1>
   </div>
   <a class="button" href="{{ url_for('new_recipe') }}">Add recipe</a>
 </div>
@@ -15,6 +15,11 @@
       <a class="recipe-card" href="{{ url_for('recipe_detail', recipe_name=recipe_name) }}">
         <strong>{{ recipe_name }}</strong>
         <span>{{ recipe.ingredients|length }} ingredients</span>
+        {% if recipe.instructions %}
+          <p>{{ recipe.instructions }}</p>
+        {% else %}
+          <p>No instructions yet.</p>
+        {% endif %}
       </a>
     {% endfor %}
   {% else %}

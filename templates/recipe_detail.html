@@ -14,12 +14,30 @@
   </div>
 </div>
 
-<section class="list-panel">
-  {% for ingredient in recipe.ingredients %}
-    <div class="list-row">
-      <span>{{ ingredient.name }}</span>
-      <strong>{{ format_amount(ingredient.amount, ingredient.unit) }}</strong>
+<section class="recipe-detail-grid">
+  <div class="list-panel">
+    <div class="section-title">
+      <p class="eyebrow">Ingredients</p>
+      <h2>What you need</h2>
     </div>
-  {% endfor %}
+    {% for ingredient in recipe.ingredients %}
+      <div class="list-row">
+        <span>{{ ingredient.name }}</span>
+        <strong>{{ format_amount(ingredient.amount, ingredient.unit) }}</strong>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="panel stack">
+    <div>
+      <p class="eyebrow">Method</p>
+      <h2>How to make it</h2>
+    </div>
+    {% if recipe.instructions %}
+      <p class="method-text">{{ recipe.instructions }}</p>
+    {% else %}
+      <p class="empty">No instructions saved yet.</p>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}
