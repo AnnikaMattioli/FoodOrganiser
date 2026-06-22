@@ -61,6 +61,51 @@
         const text = document.getElementById("copyable-list").innerText;
         navigator.clipboard.writeText(text);
       }
+
+      function setupRecipeSuggestions() {
+        const recipeNames = window.recipeNames || [];
+        const inputs = document.querySelectorAll(".recipe-search");
+
+        inputs.forEach((input) => {
+          const suggestions = input.parentElement.querySelector(".recipe-suggestions");
+
+          function showSuggestions() {
+            const query = input.value.trim().toLowerCase();
+            const matches = recipeNames
+              .filter((name) => !query || name.toLowerCase().includes(query))
+              .slice(0, 8);
+
+            suggestions.innerHTML = "";
+            if (matches.length === 0) {
+              suggestions.classList.remove("is-open");
+              return;
+            }
+
+            matches.forEach((name) => {
+              const button = document.createElement("button");
+              button.type = "button";
+              button.className = "suggestion-option";
+              button.textContent = name;
+              button.addEventListener("mousedown", (event) => {
+                event.preventDefault();
+                input.value = name;
+                suggestions.classList.remove("is-open");
+              });
+              suggestions.appendChild(button);
+            });
+
+            suggestions.classList.add("is-open");
+          }
+
+          input.addEventListener("input", showSuggestions);
+          input.addEventListener("focus", showSuggestions);
+          input.addEventListener("blur", () => {
+            setTimeout(() => suggestions.classList.remove("is-open"), 120);
+          });
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", setupRecipeSuggestions);
     </script>
   </body>
 </html>

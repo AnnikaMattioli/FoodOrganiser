@@ -14,14 +14,15 @@
       <div class="day-panel">
         <h2>{{ day }}</h2>
         {% for meal in meals %}
-          <label>
+          <label class="recipe-combobox">
             {{ meal|capitalize }}
-            <select name="{{ day }}_{{ meal }}">
-              <option value="">n/a or going out</option>
-              {% for recipe_name in recipes %}
-                <option value="{{ recipe_name }}">{{ recipe_name }}</option>
-              {% endfor %}
-            </select>
+            <input
+              class="recipe-search"
+              name="{{ day }}_{{ meal }}"
+              placeholder="Type a recipe or n/a"
+              autocomplete="off"
+            >
+            <div class="recipe-suggestions"></div>
           </label>
         {% endfor %}
       </div>
@@ -39,4 +40,8 @@
 
   <button class="big-button" type="submit">Create shopping list</button>
 </form>
+
+<script>
+  window.recipeNames = {{ recipes.keys()|list|tojson }};
+</script>
 {% endblock %}
