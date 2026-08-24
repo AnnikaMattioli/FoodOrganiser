@@ -7,6 +7,7 @@ from pathlib import Path
 
 DATA_DIR = Path("data")
 DB_FILE = DATA_DIR / "food_organiser.db"
+BUILT_IN_RECIPES_FILE = Path(__file__).with_name("recipe_collection.json")
 OLD_CUPBOARD_FILE = DATA_DIR / "cupboard.json"
 OLD_RECIPES_FILE = DATA_DIR / "recipes.json"
 
@@ -160,6 +161,7 @@ def connect_database():
     DATA_DIR.mkdir(exist_ok=True)
     connection = sqlite3.connect(DB_FILE)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
@@ -191,7 +193,16 @@ def setup_database(connection):
             name TEXT NOT NULL,
             amount REAL NOT NULL,
             unit TEXT NOT NULL,
+            include_in_shopping INTEGER NOT NULL DEFAULT 1,
             FOREIGN KEY (recipe_id) REFERENCES recipes (id) ON DELETE CASCADE
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
         )
         """
     )
@@ -218,11 +229,56 @@ def setup_database(connection):
     connection.commit()
     ensure_column(connection, "cupboard_items", "category", "TEXT NOT NULL DEFAULT 'Other'")
     ensure_column(connection, "recipes", "instructions", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(connection, "recipes", "yield_text", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(connection, "recipes", "prep_time", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(connection, "recipes", "cook_time", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(connection, "recipe_ingredients", "include_in_shopping", "INTEGER NOT NULL DEFAULT 1")
     update_existing_cupboard_categories(connection)
     seed_default_prices(connection)
-    seed_sample_recipe_instructions(connection)
     migrate_old_json_data(connection)
-    seed_sample_recipe_instructions(connection)
+    seed_built_in_recipes(connection)
+
+
+def seed_built_in_recipes(connection):
+    if not BUILT_IN_RECIPES_FILE.exists():
+        return
+    collection = json.loads(BUILT_IN_RECIPES_FILE.read_text(encoding="utf-8"))
+    version = str(collection.get("version", 1))
+    seeded = connection.execute(
+        "SELECT value FROM app_metadata WHERE key = 'recipe_collection_version'"
+    ).fetchone()
+    if seeded and seeded["value"] == version:
+        return
+
+    for recipe in collection.get("recipes", []):
+        recipe_name = normalise_name(recipe["n"])
+        if recipe_exists(connection, recipe_name):
+            continue
+        ingredients = []
+        for item in recipe["i"]:
+            ingredients.append({
+                "name": item[0],
+                "amount": item[1],
+                "unit": item[2],
+                "include_in_shopping": item[3] if len(item) > 3 else True,
+            })
+        save_recipe(
+            connection,
+            recipe_name,
+            ingredients,
+            recipe.get("m", ""),
+            recipe.get("y", ""),
+            recipe.get("p", ""),
+            recipe.get("c", ""),
+        )
+    connection.execute(
+        """
+        INSERT INTO app_metadata (key, value) VALUES ('recipe_collection_version', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        """,
+        (version,),
+    )
+    connection.commit()
 
 
 def ensure_column(connection, table_name, column_name, column_definition):
@@ -324,6 +380,10 @@ def to_base_amount(amount, unit):
 
 
 def format_amount(amount, unit):
+    if unit in {"to taste", "as needed"}:
+        return unit
+    if unit == "pinch" and amount == 1:
+        return "a pinch"
     if unit == "g" and amount >= 1000 and amount % 1000 == 0:
         return f"{int(amount / 1000)} kg"
     if unit == "ml" and amount >= 1000 and amount % 1000 == 0:
@@ -509,14 +569,14 @@ def recipe_exists(connection, recipe_name):
 
 def get_recipes(connection):
     rows = connection.execute(
-        "SELECT id, name, instructions FROM recipes ORDER BY name"
+        "SELECT id, name, instructions, yield_text, prep_time, cook_time FROM recipes ORDER BY name"
     ).fetchall()
     recipes = {}
 
     for row in rows:
         ingredient_rows = connection.execute(
             """
-            SELECT name, amount, unit
+            SELECT name, amount, unit, include_in_shopping
             FROM recipe_ingredients
             WHERE recipe_id = ?
             ORDER BY id
@@ -525,11 +585,15 @@ def get_recipes(connection):
         ).fetchall()
         recipes[row["name"]] = {
             "instructions": row["instructions"] or "",
+            "yield": row["yield_text"] or "",
+            "prep_time": row["prep_time"] or "",
+            "cook_time": row["cook_time"] or "",
             "ingredients": [
                 {
                     "name": ingredient["name"],
                     "amount": ingredient["amount"],
                     "unit": ingredient["unit"],
+                    "include_in_shopping": bool(ingredient["include_in_shopping"]),
                 }
                 for ingredient in ingredient_rows
             ]
@@ -538,24 +602,28 @@ def get_recipes(connection):
     return recipes
 
 
-def save_recipe(connection, recipe_name, ingredients, instructions=""):
+def save_recipe(connection, recipe_name, ingredients, instructions="", yield_text="", prep_time="", cook_time=""):
     cursor = connection.execute(
-        "INSERT INTO recipes (name, instructions) VALUES (?, ?)",
-        (recipe_name, instructions.strip()),
+        """INSERT INTO recipes
+           (name, instructions, yield_text, prep_time, cook_time)
+           VALUES (?, ?, ?, ?, ?)""",
+        (recipe_name, instructions.strip(), yield_text.strip(), prep_time.strip(), cook_time.strip()),
     )
     recipe_id = cursor.lastrowid
 
     for ingredient in ingredients:
         connection.execute(
             """
-            INSERT INTO recipe_ingredients (recipe_id, name, amount, unit)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO recipe_ingredients
+                (recipe_id, name, amount, unit, include_in_shopping)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 recipe_id,
                 ingredient["name"],
                 ingredient["amount"],
                 ingredient["unit"],
+                int(ingredient.get("include_in_shopping", True)),
             ),
         )
 
@@ -566,6 +634,16 @@ def update_recipe_instructions(connection, recipe_name, instructions):
     connection.execute(
         "UPDATE recipes SET instructions = ? WHERE name = ?",
         (instructions.strip(), recipe_name),
+    )
+    connection.commit()
+
+
+def update_recipe_details(connection, recipe_name, yield_text, prep_time, cook_time):
+    connection.execute(
+        """UPDATE recipes
+           SET yield_text = ?, prep_time = ?, cook_time = ?
+           WHERE name = ?""",
+        (yield_text.strip(), prep_time.strip(), cook_time.strip(), recipe_name),
     )
     connection.commit()
 
@@ -585,14 +663,16 @@ def replace_recipe_ingredients(connection, recipe_name, ingredients):
     for ingredient in ingredients:
         connection.execute(
             """
-            INSERT INTO recipe_ingredients (recipe_id, name, amount, unit)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO recipe_ingredients
+                (recipe_id, name, amount, unit, include_in_shopping)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 recipe["id"],
                 ingredient["name"],
                 ingredient["amount"],
                 ingredient["unit"],
+                int(ingredient.get("include_in_shopping", True)),
             ),
         )
     connection.commit()
@@ -839,6 +919,8 @@ def ingredients_for_plan(plan, recipes):
                 continue
             recipe = recipes[recipe_name]
             for ingredient in recipe["ingredients"]:
+                if not ingredient.get("include_in_shopping", True):
+                    continue
                 add_amount(
                     required,
                     ingredient["name"],

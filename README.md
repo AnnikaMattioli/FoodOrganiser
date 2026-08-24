@@ -9,6 +9,9 @@ A beginner-friendly terminal app for planning uni meals, tracking cupboard ingre
 - Lets you save recipes manually.
 - Lets you view, edit, and delete saved recipes.
 - Stores recipe instructions so the recipe book can show how to make each meal.
+- Includes the checked personal recipe collection on fresh installations.
+- Shows recipe yields and preparation/cooking times when supplied.
+- Can display pantry basics such as water, salt, and pepper without adding them to shopping lists.
 - Plans 7 days of lunch and dinner.
 - Lets you type `n/a` for meals where you are going out or skipping food at home.
 - Shows what percentage of a recipe's ingredients you already have.

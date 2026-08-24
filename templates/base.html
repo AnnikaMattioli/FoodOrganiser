@@ -39,6 +39,10 @@
           <input name="${prefix}_name" placeholder="Ingredient">
           <input name="${prefix}_amount" type="number" min="0" step="0.01" placeholder="Amount">
           <input name="${prefix}_unit" placeholder="Unit">
+          <select name="${prefix}_shopping" aria-label="Add to shopping list">
+            <option value="yes">Add to shopping</option>
+            <option value="no">Display only</option>
+          </select>
           <button class="icon-button" type="button" onclick="this.parentElement.remove()" title="Remove">x</button>
         `;
         container.appendChild(row);

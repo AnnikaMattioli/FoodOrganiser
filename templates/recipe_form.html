@@ -16,6 +16,12 @@
     </label>
   {% endif %}
 
+  <div class="ingredient-row">
+    <label>Yield or servings<input name="yield_text" value="{{ yield_text }}" placeholder="Serves 4"></label>
+    <label>Preparation time<input name="prep_time" value="{{ prep_time }}" placeholder="20 minutes"></label>
+    <label>Cooking time<input name="cook_time" value="{{ cook_time }}" placeholder="45 minutes"></label>
+  </div>
+
   <label>
     Instructions
     <textarea name="instructions" rows="5" placeholder="Write the steps for making this recipe.">{{ instructions }}</textarea>
@@ -27,6 +33,10 @@
         <input name="ingredient_name" value="{{ ingredient.name }}" placeholder="Ingredient">
         <input name="ingredient_amount" value="{{ ingredient.amount }}" type="number" min="0" step="0.01" placeholder="Amount">
         <input name="ingredient_unit" value="{{ ingredient.unit }}" placeholder="Unit">
+        <select name="ingredient_shopping" aria-label="Add to shopping list">
+          <option value="yes" {% if ingredient.include_in_shopping %}selected{% endif %}>Add to shopping</option>
+          <option value="no" {% if not ingredient.include_in_shopping %}selected{% endif %}>Display only</option>
+        </select>
         <button class="icon-button" type="button" onclick="this.parentElement.remove()" title="Remove">x</button>
       </div>
     {% endfor %}

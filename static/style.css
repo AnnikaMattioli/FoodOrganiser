@@ -555,3 +555,21 @@ textarea {
     font-size: 2.25rem;
   }
 }
+.recipe-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: -0.5rem 0 1.5rem;
+}
+
+.recipe-meta span {
+  background: var(--surface, #fff);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+}
+
+.list-row small {
+  display: block;
+  font-weight: normal;
+  opacity: 0.65;
+}

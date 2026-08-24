@@ -16,9 +16,12 @@ def parse_ingredients(prefix="ingredient"):
     names = request.form.getlist(f"{prefix}_name")
     amounts = request.form.getlist(f"{prefix}_amount")
     units = request.form.getlist(f"{prefix}_unit")
+    shopping_flags = request.form.getlist(f"{prefix}_shopping")
     ingredients = []
 
-    for name, amount, unit in zip(names, amounts, units):
+    if not shopping_flags:
+        shopping_flags = ["yes"] * len(names)
+    for name, amount, unit, shopping_flag in zip(names, amounts, units, shopping_flags):
         name = food.normalise_name(name)
         unit = food.normalise_unit(unit)
         if not name or not amount:
@@ -28,7 +31,12 @@ def parse_ingredients(prefix="ingredient"):
         except ValueError:
             continue
         amount_value, unit = food.to_base_amount(amount_value, unit)
-        ingredients.append({"name": name, "amount": amount_value, "unit": unit})
+        ingredients.append({
+            "name": name,
+            "amount": amount_value,
+            "unit": unit,
+            "include_in_shopping": shopping_flag != "no",
+        })
 
     return ingredients
 
@@ -95,7 +103,15 @@ def new_recipe():
         if recipe_name and ingredients:
             connection = get_connection()
             if not food.recipe_exists(connection, recipe_name):
-                food.save_recipe(connection, recipe_name, ingredients, instructions)
+                food.save_recipe(
+                    connection,
+                    recipe_name,
+                    ingredients,
+                    instructions,
+                    request.form.get("yield_text", ""),
+                    request.form.get("prep_time", ""),
+                    request.form.get("cook_time", ""),
+                )
             connection.close()
         return redirect(url_for("recipes"))
 
@@ -104,6 +120,9 @@ def new_recipe():
         recipe_name="",
         ingredients=[],
         instructions="",
+        yield_text="",
+        prep_time="",
+        cook_time="",
         mode="Add",
     )
 
@@ -144,6 +163,13 @@ def edit_recipe(recipe_name):
                 recipe_name,
                 request.form.get("instructions", ""),
             )
+            food.update_recipe_details(
+                connection,
+                recipe_name,
+                request.form.get("yield_text", ""),
+                request.form.get("prep_time", ""),
+                request.form.get("cook_time", ""),
+            )
         connection.close()
         return redirect(url_for("recipe_detail", recipe_name=recipe_name))
 
@@ -153,6 +179,9 @@ def edit_recipe(recipe_name):
         recipe_name=recipe_name,
         ingredients=recipe["ingredients"],
         instructions=recipe["instructions"],
+        yield_text=recipe["yield"],
+        prep_time=recipe["prep_time"],
+        cook_time=recipe["cook_time"],
         mode="Edit",
     )
 

@@ -14,6 +14,14 @@
   </div>
 </div>
 
+{% if recipe.yield or recipe.prep_time or recipe.cook_time %}
+<div class="recipe-meta">
+  {% if recipe.yield %}<span><strong>{{ recipe.yield }}</strong></span>{% endif %}
+  {% if recipe.prep_time %}<span>Prep: <strong>{{ recipe.prep_time }}</strong></span>{% endif %}
+  {% if recipe.cook_time %}<span>Cook: <strong>{{ recipe.cook_time }}</strong></span>{% endif %}
+</div>
+{% endif %}
+
 <section class="recipe-detail-grid">
   <div class="list-panel">
     <div class="section-title">
@@ -23,7 +31,7 @@
     {% for ingredient in recipe.ingredients %}
       <div class="list-row">
         <span>{{ ingredient.name }}</span>
-        <strong>{{ format_amount(ingredient.amount, ingredient.unit) }}</strong>
+        <strong>{{ format_amount(ingredient.amount, ingredient.unit) }}{% if not ingredient.include_in_shopping %} <small>(not added to shopping)</small>{% endif %}</strong>
       </div>
     {% endfor %}
   </div>
